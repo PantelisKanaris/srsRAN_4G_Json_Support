@@ -18,6 +18,24 @@ For application features, build instructions and user guides see the [srsRAN 4G 
 
 For license details, see LICENSE file.
 
+For building the application 
+cd srsRAN_4G
+mkdir build
+cd build
+cmake .. \
+  -DENABLE_ZMQ=ON \
+  -DENABLE_EXAMPLES=ON \
+  -DCMAKE_BUILD_TYPE=Release \
+  -DCMAKE_C_FLAGS="-Werror -Wno-error=array-bounds" \
+  -DCMAKE_CXX_FLAGS="-Werror -Wno-error=array-bounds"
+make -j$(nproc)
+
+Afterwards once it has succeffuly been build you need to relocate the default profile or make your own to the src folder of the srsue binary.
+mkdir -p default_config
+file ./srsue/ue.conf.example
+ls -l ./srsue/ue.conf.example
+./srsue --config=default_config/ue.conf
+
 Support
 =======
 
