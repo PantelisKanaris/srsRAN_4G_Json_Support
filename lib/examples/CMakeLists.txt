@@ -18,6 +18,38 @@
 # and at http://www.gnu.org/licenses/.
 #
 
+#Adding the Cjson files
+include(ExternalProject)
+include(FindPkgConfig)
+
+pkg_check_modules(CJSON QUIET cjson)
+
+if (NOT CJSON_FOUND)
+  message(STATUS "cJSON not found, auto-downloading and building...")
+
+  ExternalProject_Add(
+    cjson_project
+    GIT_REPOSITORY https://github.com/DaveGamble/cJSON.git
+    GIT_TAG        v1.7.18
+    UPDATE_COMMAND ""
+    CONFIGURE_COMMAND cmake -DCMAKE_INSTALL_PREFIX=${CMAKE_BINARY_DIR}/cjson_install <SOURCE_DIR>
+    BUILD_COMMAND make
+    INSTALL_COMMAND make install
+  )
+
+  set(CJSON_INCLUDE_DIRS ${CMAKE_BINARY_DIR}/cjson_install/include)
+  set(CJSON_LIBRARIES ${CMAKE_BINARY_DIR}/cjson_install/lib/libcjson.so)
+
+  include_directories(${CJSON_INCLUDE_DIRS})
+  set(CJSON_DEPS cjson_project)
+else()
+  include_directories(${CJSON_INCLUDE_DIRS})
+  link_directories(${CJSON_LIBRARY_DIRS})
+endif()
+
+
+
+
 #################################################################
 # Applications
 #################################################################
@@ -77,6 +109,14 @@ if(RF_FOUND)
 
   add_executable(cell_search cell_search.c)
   target_link_libraries(cell_search srsran_phy srsran_common srsran_rf)
+##Added the Json libraries
+  if (CJSON_LIBRARIES)
+  target_link_libraries(cell_search ${CJSON_LIBRARIES})
+endif()
+
+if (CJSON_DEPS)
+  add_dependencies(cell_search ${CJSON_DEPS})
+endif()
 
   add_executable(usrp_capture usrp_capture.c)
   target_link_libraries(usrp_capture srsran_phy srsran_rf)
