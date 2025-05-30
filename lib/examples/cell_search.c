@@ -96,6 +96,42 @@ void SerializeCell(struct cells  * cell)
   cJSON_Delete(root);
 }
 
+void SerializeCells(struct cells* cells, int n_cells)
+{
+  cJSON* root = cJSON_CreateObject();
+  cJSON* cell_array = cJSON_CreateArray();
+
+  for (int i = 0; i < n_cells; i++) {
+    cJSON* cell_obj = cJSON_CreateObject();
+    cJSON_AddNumberToObject(cell_obj, "cell_id", cells[i].cell.id);
+    cJSON_AddNumberToObject(cell_obj, "freq_khz", cells[i].freq);
+    cJSON_AddNumberToObject(cell_obj, "earfcn", cells[i].dl_earfcn);
+    cJSON_AddNumberToObject(cell_obj, "prb", cells[i].cell.nof_prb);
+    cJSON_AddNumberToObject(cell_obj, "ports", cells[i].cell.nof_ports);
+    cJSON_AddNumberToObject(cell_obj, "pss_power", srsran_convert_power_to_dB(cells[i].power));
+
+    cJSON_AddItemToArray(cell_array, cell_obj);
+  }
+
+  cJSON_AddItemToObject(root, "cells", cell_array);
+
+  char* json_str = cJSON_Print(root);
+  if (!json_str) {
+    printf("ERROR: Failed to create JSON string\n");
+    exit(-1);
+  }
+
+  FILE* fp = fopen("cell_info.json", "w");
+  if (fp) {
+    fputs(json_str, fp);
+    fclose(fp);
+  } else {
+    printf("ERROR: Could not write JSON file\n");
+  }
+
+  free(json_str);
+  cJSON_Delete(root);
+}
 
 void usage(char* prog)
 {
@@ -321,8 +357,9 @@ output_results:
            results[i].cell.nof_prb,
            results[i].cell.nof_ports,
            srsran_convert_power_to_dB(results[i].power));
-           SerializeCell(&results[i]);
+          //  SerializeCell(&results[i]);
   }
+  SerializeCells(results,n_found_cells);
 
   printf("\nBye\n");
 
