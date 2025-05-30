@@ -19,6 +19,7 @@
  *
  */
 
+#include <cjson/cJSON.h>
 #include <math.h>
 #include <signal.h>
 #include <stdio.h>
@@ -43,7 +44,7 @@
 #define SAMP_FREQ 1920000
 #define FLEN 9600
 #define FLEN_PERIOD 0.005
-
+bool test_mode = false;
 #define MAX_EARFCN 1000
 
 int band         = -1;
@@ -67,6 +68,35 @@ float rf_gain = 70.0;
 char* rf_args = "";
 char* rf_dev  = "";
 
+void SerializeCell(struct cells  * cell)
+{
+  cJSON* root = cJSON_CreateObject();
+  if (root == NULL) {
+    printf("ERROR: Json serializer failed to initialize \n");
+    exit(-1);
+  }
+  cJSON_AddNumberToObject(root, "cell_id", cell->cell.id);
+  cJSON_AddNumberToObject(root, "freq_khz", cell->freq);
+  cJSON_AddNumberToObject(root, "earfcn", cell->dl_earfcn);
+  cJSON_AddNumberToObject(root, "prb", cell->cell.nof_prb);
+  cJSON_AddNumberToObject(root, "ports", cell->cell.nof_ports);
+  cJSON_AddNumberToObject(root, "pss_power", srsran_convert_power_to_dB(cell->power));
+  char* json_str = cJSON_Print(root);
+  if (json_str == NULL) {
+    printf("ERROR: Json serializer failed to  \n");
+    exit(-1);
+  }
+
+  FILE* fp = fopen("cell_info.json", "a");
+  if (fp) {
+    fputs(json_str, fp);
+    fclose(fp);
+  }
+  free(json_str);
+  cJSON_Delete(root);
+}
+
+
 void usage(char* prog)
 {
   printf("Usage: %s [agsendtvb] -b band\n", prog);
@@ -82,7 +112,7 @@ void usage(char* prog)
 void parse_args(int argc, char** argv)
 {
   int opt;
-  while ((opt = getopt(argc, argv, "agsendvb")) != -1) {
+  while ((opt = getopt(argc, argv, "agsendvbt")) != -1) {
     switch (opt) {
       case 'a':
         rf_args = argv[optind];
@@ -108,12 +138,16 @@ void parse_args(int argc, char** argv)
       case 'v':
         increase_srsran_verbose_level();
         break;
+        case 't':
+        test_mode = true;
+        break;
       default:
         usage(argv[0]);
         exit(-1);
     }
   }
-  if (band == -1) {
+  if (!test_mode && band == -1) 
+  {
     usage(argv[0]);
     exit(-1);
   }
@@ -154,6 +188,29 @@ int main(int argc, char** argv)
   srsran_debug_handle_crash(argc, argv);
 
   parse_args(argc, argv);
+
+  if (test_mode) {
+    printf("Running in TEST MODE. Skipping RF init.\n");
+  
+    n_found_cells = 2;
+  
+    results[0].cell.id = 100;
+    results[0].cell.nof_prb = 50;
+    results[0].cell.nof_ports = 2;
+    results[0].freq = 2685.0;
+    results[0].dl_earfcn = 18000;
+    results[0].power = 0.05;
+  
+    results[1].cell.id = 101;
+    results[1].cell.nof_prb = 75;
+    results[1].cell.nof_ports = 4;
+    results[1].freq = 2650.0;
+    results[1].dl_earfcn = 18500;
+    results[1].power = 0.1;
+  
+    goto output_results;
+  }
+
 
   printf("Opening RF device...\n");
 
@@ -254,6 +311,7 @@ int main(int argc, char** argv)
     }
   }
 
+output_results:
   printf("\n\nFound %d cells\n", n_found_cells);
   for (int i = 0; i < n_found_cells; i++) {
     printf("Found CELL %.1f MHz, EARFCN=%d, PHYID=%d, %d PRB, %d ports, PSS power=%.1f dBm\n",
@@ -263,11 +321,15 @@ int main(int argc, char** argv)
            results[i].cell.nof_prb,
            results[i].cell.nof_ports,
            srsran_convert_power_to_dB(results[i].power));
+           SerializeCell(&results[i]);
   }
 
   printf("\nBye\n");
 
+  if(!test_mode)
+{  
   srsran_ue_cellsearch_free(&cs);
   srsran_rf_close(&rf);
+}
   exit(0);
 }
