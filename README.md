@@ -21,7 +21,7 @@ For license details, see LICENSE file.
 For building the application 
 cd srsRAN_4G
 mkdir build
-cd build
+cd build \n
 cmake .. \
   -DENABLE_ZMQ=ON \
   -DENABLE_EXAMPLES=ON \
