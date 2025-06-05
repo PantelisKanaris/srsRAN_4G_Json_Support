@@ -36,6 +36,9 @@ file ./srsue/ue.conf.example
 ls -l ./srsue/ue.conf.example
 ./srsue --config=default_config/ue.conf
 
+Also after you have build it you can run cell search in the build folder using:
+ ./lib/examples/cell_search -t
+
 Support
 =======
 
